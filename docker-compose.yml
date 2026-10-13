@@ -1,0 +1,44 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cs2_tournaments
+      POSTGRES_USER: cs2
+      POSTGRES_PASSWORD: cs2
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cs2 -d cs2_tournaments"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      APP_ENV: production
+      BOT_TOKEN: ${BOT_TOKEN}
+      WEBAPP_URL: ${WEBAPP_URL}
+      DATABASE_URL: postgresql+asyncpg://cs2:cs2@postgres:5432/cs2_tournaments
+      AUTO_CREATE_DB: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      ADMIN_TELEGRAM_IDS: ${ADMIN_TELEGRAM_IDS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api/v1
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  postgres_data:
+
